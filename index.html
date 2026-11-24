@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>대한민국 시도 행정지도</title>
+<style>
+  :root { --bg:#f7f6f2; --ink:#1f2328; --muted:#6b6f76; --line:#ffffff; --hl:#d9480f; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:20px 24px 4px; }
+  h1 { margin:0; font-size:20px; font-weight:700; }
+  p.sub { margin:4px 0 0; font-size:13px; color:var(--muted); }
+  #wrap { position:relative; max-width:720px; margin:0 auto; padding:8px 16px 16px; }
+  svg { width:100%; height:auto; display:block; }
+  path.region { stroke:var(--line); stroke-width:0.8; cursor:pointer; transition:fill .15s; }
+  path.region:hover, path.region.active { fill:var(--hl) !important; }
+  text.label { font-size:10px; fill:#1f2328; pointer-events:none; text-anchor:middle; paint-order:stroke; stroke:#fff; stroke-width:2.5px; }
+  #info { position:absolute; top:16px; left:24px; background:#fff; border:1px solid #e3e1da; border-radius:8px; padding:8px 12px; font-size:13px; min-width:150px; }
+  #info b { font-size:15px; }
+  footer { max-width:720px; margin:0 auto; padding:0 24px 24px; font-size:11px; color:var(--muted); line-height:1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>대한민국 시도 행정지도</h1>
+  <p class="sub">17개 광역자치단체 · 지역에 마우스를 올리거나 탭하세요</p>
+</header>
+<div id="wrap">
+  <div id="info"><b>-</b><br><span id="eng">&nbsp;</span></div>
+  <svg id="map" viewBox="0 0 600 720" role="img" aria-label="대한민국 시도 경계 지도"></svg>
+</div>
+<footer>
+  경계 데이터: <a href="https://github.com/southkorea/southkorea-maps">southkorea/southkorea-maps</a> (통계청 2013년 기준, 간소화).
+  명칭은 현행(강원특별자치도·전북특별자치도)으로 수정했으나, 2023년 7월 군위군의 경북→대구 편입 등 이후 경계 변경은 반영되지 않았습니다.
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script>
+const palette = ["#4c6ef5","#15aabf","#40c057","#fab005","#7950f2","#e64980","#12b886","#228be6","#82c91e","#fd7e14","#be4bdb","#4263eb","#0ca678","#f59f00","#5c7cfa","#20c997","#94d82d"];
+const svg = d3.select("#map");
+const info = d3.select("#info b"), eng = d3.select("#eng");
+const SRC = "https://raw.githubusercontent.com/southkorea/southkorea-maps/master/kostat/2013/json/skorea_provinces_geo_simple.json";
+const RENAME = {"강원도":"강원특별자치도","전라북도":"전북특별자치도"};
+d3.json(SRC).then(geo => {
+  geo.features.forEach(f => { f.properties.name = RENAME[f.properties.name] || f.properties.name; });
+  const proj = d3.geoMercator().fitExtent([[20,20],[580,700]], geo);
+  const path = d3.geoPath(proj);
+  const show = d => { info.text(d.properties.name); eng.text(d.properties.name_eng); };
+  svg.append("g").selectAll("path").data(geo.features).join("path")
+    .attr("class","region").attr("d", path)
+    .attr("fill", (d,i) => palette[i % palette.length])
+    .on("mouseenter click", function(e, d){ svg.selectAll("path.region").classed("active", false); d3.select(this).classed("active", true); show(d); });
+  const small = new Set(["서울특별시","인천광역시","대전광역시","광주광역시","대구광역시","울산광역시","부산광역시","세종특별자치시"]);
+  svg.append("g").selectAll("text").data(geo.features).join("text")
+    .attr("class","label")
+    .attr("transform", d => `translate(${path.centroid(d)})`)
+    .text(d => small.has(d.properties.name) ? d.properties.name.replace(/(특별자치시|특별시|광역시)$/,"") : d.properties.name);
+});
+</script>
+</body>
+</html>
